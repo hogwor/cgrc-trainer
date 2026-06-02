@@ -61,8 +61,10 @@ struct Question: Identifiable {
 ```
 
 **Persistence (UserDefaults, no backend):**
-- Progress key `cgrc_trainer_v1` (answered/correct, per-domain `domA`/`domC`, and
-  `wrongIDs` powering "drill weak questions").
+- Progress key `cgrc_trainer_v1` (answered/correct, per-domain `domA`/`domC`,
+  `wrongIDs` powering "drill weak questions", and `items` — the per-question
+  spaced-repetition state, see below). The `items` field is additive/back-compatible:
+  old saves load with an empty mastery map.
 - Audio resume keys `audio_last_track_id` / `audio_last_paragraph`; the player
   restores position and shows a **Resume** banner — don't auto-restart at 0.
 
@@ -170,6 +172,14 @@ EOF
   2.0. Setup screen surfaces struggling domains + boost factor.
 - Specific-domain quiz draws that domain; "drill weak questions" pulls
   `store.wrongIDs`. Modes: instant feedback vs. exam-style (feedback at end).
+- **Spaced repetition (Leitner).** Each question carries an `ItemStat` (box 0…5,
+  seen/correct, `due`). A correct quiz answer or flashcard "Got it" promotes one
+  box; a miss resets to box 0. Review intervals per box are
+  `BOX_INTERVALS_DAYS = [0,1,3,7,14,30]`; **mastered = `MASTERY_BOX` (5)**.
+  "Spaced review · N due" quizzes `store.dueIDs` (seen, not-mastered, interval
+  elapsed). Flashcard self-ratings call `store.reviewCard` (mastery only — they
+  deliberately do **not** touch quiz accuracy stats). Progress tab shows the
+  mastered/seen/due counts and the per-box pyramid via `store.boxCounts()`.
 - Exam-style mode must **not** reveal the key via option color — `bg(for:)` guards
   on `instant`.
 - **Freeze quiz items at Start — never feed `QuizView` from a store-dependent

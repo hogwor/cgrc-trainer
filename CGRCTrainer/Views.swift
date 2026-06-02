@@ -55,6 +55,8 @@ func adaptivePool(store: Store) -> [Question] {
     return pool.shuffled()
 }
 
+enum QuizSource { case normal, weak, due }
+
 // MARK: - Quiz setup
 struct QuizSetupView: View {
     @EnvironmentObject var store: Store
@@ -73,14 +75,18 @@ struct QuizSetupView: View {
 
     /// Snapshot the question set once, so answering (which mutates `store`) can't
     /// reshuffle the quiz out from under the runner.
-    func startQuiz(weak: Bool) {
-        let source = weak
-            ? questions(forDomain: nil, weak: store.wrongIDs)
-            : (domain == 0 ? adaptivePool(store: store) : questions(forDomain: domain, weak: nil))
-        let shuffled = source.shuffled()
-        let n = weak ? shuffled.count : min(count, shuffled.count)
+    func startQuiz(source: QuizSource) {
+        let pool: [Question]
+        switch source {
+        case .weak:   pool = BANK.filter { store.wrongIDs.contains($0.id) }
+        case .due:    pool = BANK.filter { store.dueIDs.contains($0.id) }
+        case .normal: pool = (domain == 0 ? adaptivePool(store: store)
+                                          : questions(forDomain: domain, weak: nil))
+        }
+        let shuffled = pool.shuffled()
+        let n = (source == .normal) ? min(count, shuffled.count) : shuffled.count
         quizItems = Array(shuffled.prefix(n))
-        active = true
+        active = !quizItems.isEmpty
     }
 
     /// Domains where the user is scoring below 70% and has enough data to judge.
@@ -132,10 +138,14 @@ struct QuizSetupView: View {
                     Toggle("Instant feedback", isOn: $instant)
                 }
                 Section {
-                    Button("Start quiz") { startQuiz(weak: false) }
+                    Button("Start quiz") { startQuiz(source: .normal) }
                         .disabled(pool.isEmpty)
-                    Button("Drill my weak questions") { startQuiz(weak: true) }
+                    Button("Spaced review · \(store.dueIDs.count) due") { startQuiz(source: .due) }
+                        .disabled(store.dueIDs.isEmpty)
+                    Button("Drill my weak questions") { startQuiz(source: .weak) }
                         .disabled(store.wrongIDs.isEmpty)
+                } footer: {
+                    Text("Spaced review resurfaces items as their Leitner interval elapses (1 → 3 → 7 → 14 → 30 days); answer correctly to advance a box, miss to reset. Mastered: \(store.masteredCount)/\(BANK.count).")
                 }
                 Section("Exam blueprint") {
                     Text("125 items · 3 hours · pass at 700/1000. Domain weights:")
@@ -321,6 +331,7 @@ struct ResultsView: View {
 
 // MARK: - Flashcards
 struct FlashcardView: View {
+    @EnvironmentObject var store: Store
     @State private var domain = 0
     @State private var deck: [Question] = []
     @State private var idx = 0
@@ -359,19 +370,34 @@ struct FlashcardView: View {
                     }
                     .buttonStyle(.plain)
 
-                    HStack {
-                        Button("← Prev") { move(-1) }
-                        Spacer()
-                        Button("Flip") { flipped.toggle() }.buttonStyle(.borderedProminent)
-                        Spacer()
-                        Button("Next →") { move(1) }
+                    if flipped {
+                        // Self-rating feeds the spaced-repetition schedule.
+                        HStack(spacing: 12) {
+                            Button { rate(false) } label: {
+                                Label("Review again", systemImage: "arrow.counterclockwise")
+                                    .frame(maxWidth: .infinity)
+                            }.tint(.orange)
+                            Button { rate(true) } label: {
+                                Label("Got it", systemImage: "checkmark")
+                                    .frame(maxWidth: .infinity)
+                            }.tint(.green)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    } else {
+                        HStack {
+                            Button("← Prev") { move(-1) }
+                            Spacer()
+                            Button("Flip") { flipped.toggle() }.buttonStyle(.borderedProminent)
+                            Spacer()
+                            Button("Next →") { move(1) }
+                        }
                     }
                 }
                 Spacer()
             }
             .padding()
             .navigationTitle("Flashcards")
-            .onAppear { build() }
+            .onAppear { if deck.isEmpty { build() } }
         }
     }
 
@@ -383,6 +409,12 @@ struct FlashcardView: View {
         guard !deck.isEmpty else { return }
         idx = (idx + d + deck.count) % deck.count
         flipped = false
+    }
+    /// Record a self-rating into the SR model, then advance to the next card.
+    func rate(_ ok: Bool) {
+        guard !deck.isEmpty else { return }
+        store.reviewCard(id: deck[idx].id, isCorrect: ok)
+        move(1)
     }
 }
 
@@ -399,6 +431,23 @@ struct StatsView: View {
                     LabeledContent("Overall accuracy", value: acc)
                     LabeledContent("Quizzes taken", value: "\(store.quizzes)")
                     LabeledContent("Weak questions", value: "\(store.wrongIDs.count)")
+                }
+                Section("Mastery") {
+                    let mastered = store.masteredCount
+                    LabeledContent("Mastered", value: "\(mastered) / \(BANK.count)  (\(BANK.isEmpty ? 0 : mastered * 100 / BANK.count)%)")
+                    LabeledContent("Questions seen", value: "\(store.seenCount) / \(BANK.count)")
+                    LabeledContent("Due for review", value: "\(store.dueIDs.count)")
+                    let boxes = store.boxCounts()
+                    let denom = max(1, store.seenCount)
+                    ForEach(0...MASTERY_BOX, id: \.self) { b in
+                        HStack {
+                            Text(b == 0 ? "New/lapsed" : b == MASTERY_BOX ? "Mastered" : "Box \(b)")
+                                .frame(width: 96, alignment: .leading).font(.footnote)
+                            ProgressView(value: Double(boxes[b]), total: Double(denom))
+                                .tint(b == MASTERY_BOX ? .green : (b == 0 ? .orange : .blue))
+                            Text("\(boxes[b])").frame(width: 40, alignment: .trailing).font(.footnote)
+                        }
+                    }
                 }
                 Section("Accuracy by domain") {
                     ForEach(1...7, id: \.self) { d in

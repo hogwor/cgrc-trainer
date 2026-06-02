@@ -5,9 +5,10 @@ questions across all 7 domains, weighted to the official blueprint.
 
 ## Features
 - **Quiz** — pick a domain (or all), choose length, instant or end-of-exam feedback, scored results with per-domain breakdown and full answer review.
+- **Spaced repetition** — a Leitner schedule resurfaces each question as its interval (1 → 3 → 7 → 14 → 30 days) elapses; answer correctly to advance a box, miss to reset. "Spaced review · N due" quizzes exactly what's due.
 - **Drill weak questions** — re-quiz only the questions you've missed.
-- **Flashcards** — flip term ↔ answer + explanation, by domain.
-- **Progress** — overall accuracy, accuracy per domain, persisted on-device (UserDefaults).
+- **Flashcards** — flip term ↔ answer + explanation, by domain; rate "Got it" / "Review again" to feed the spaced-repetition schedule.
+- **Progress** — overall accuracy, accuracy per domain, and a mastery panel (mastered/seen/due counts + per-box pyramid), persisted on-device (UserDefaults).
 
 ## Requirements
 - A Mac with **Xcode 15+** (iOS 16.0 deployment target).
