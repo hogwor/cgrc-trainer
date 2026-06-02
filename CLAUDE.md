@@ -76,18 +76,17 @@ the target column (for a 750-item bank):
 | # | Domain | Weight | Target | Bank now |
 |---|--------|--------|--------|----------|
 | 1 | Security & Privacy Governance, Risk Mgmt & Compliance Program | 16% | 120 | 120 |
-| 2 | Scope of the System | 10% | 75 | 81 |
-| 3 | Selection & Approval of Framework, Security & Privacy Controls | 14% | 105 | 111 |
-| 4 | Implementation of Security & Privacy Controls | 17% | 127 | 122 |
-| 5 | Assessment/Audit of Security & Privacy Controls | 16% | 120 | 114 |
-| 6 | System Compliance | 14% | 105 | 77 |
-| 7 | Compliance Maintenance | 13% | 98 | 125 |
+| 2 | Scope of the System | 10% | 75 | 75 |
+| 3 | Selection & Approval of Framework, Security & Privacy Controls | 14% | 105 | 105 |
+| 4 | Implementation of Security & Privacy Controls | 17% | 127 | 127 |
+| 5 | Assessment/Audit of Security & Privacy Controls | 16% | 120 | 120 |
+| 6 | System Compliance | 14% | 105 | 105 |
+| 7 | Compliance Maintenance | 13% | 98 | 98 |
 
 `DOMAINS` display strings use shorter labels; canonical names are above. **D4
-(Implementation, 17%) is the heaviest domain.** The "Bank now" column trails the
-target — per-domain rebalancing is in progress (see Status); each new item should
-go into an under-target domain (D4/D5/D6) and replace a redundant item in an
-over-target one (D2/D3/D7).
+(Implementation, 17%) is the heaviest domain.** The per-domain bank counts now hit
+the 2024 targets exactly — keep them there: any new item must go into a domain and
+replace a redundant item in the same domain (or rebalance with a matching swap).
 
 ---
 
@@ -99,7 +98,7 @@ preserve all of these; re-verify after editing.
 1. **Each `Question(...)` on its own single line** ending `),`. Line tooling
    depends on it — never wrap a literal across lines.
 2. **Exactly 4 options; `answer` in 0–3.**
-3. **No duplicate `id`s.** Gaps fine. New items use ids ≥ 1200 (AI set is 1200–1209).
+3. **No duplicate `id`s.** Gaps fine. New items use ids ≥ 1200 (AI set is 1200–1248; next free ≥ 1249).
 4. **Answer position ~balanced** (~25% each A/B/C/D). The bank was de-biased from
    87% "B"; vary the correct position when adding, re-check when bulk-editing.
 5. **No joke / non-functioning distractors.** Every distractor must be plausible to
@@ -215,13 +214,15 @@ model.
 chance. Don't push rank-1 lower (reverse tell); just keep options length-comparable
 per invariant #10. The verifier above reports `len-rank`/`severe`.
 
-**AI security — pilot done, scale-up pending.** The 2024 outline embeds AI/ML
-across all domains (algorithmic transparency / black-box risk, model governance &
-"machine unlearning", prompt injection, data poisoning, ML-pipeline/MLOps controls,
-bias detection). A **10-item pilot (ids 1200–1209)** now spans all 7 domains,
-grounded in NIST AI RMF / AI 600-1 / OWASP LLM / MITRE ATLAS, swapped in for 10
-redundant items. **Remaining:** ~35 more AI items, following the same pattern.
+**AI security — complete.** The 2024 outline embeds AI/ML across all domains
+(algorithmic transparency / black-box risk, model governance, prompt injection,
+data poisoning, ML-pipeline/MLOps controls, bias detection). **49 AI items (ids
+1200–1248)** now span all 7 domains, grounded in NIST AI RMF 1.0 / AI 600-1 GenAI
+Profile / OWASP LLM Top 10 / MITRE ATLAS — and deliberately *not* tied to volatile
+EO/OMB citations. Each was swapped in for a redundant near-duplicate, so the bank
+stayed at 750. New AI ids continue at ≥ 1249.
 
-**Per-domain rebalance.** Counts still trail the 2024 targets (see table; mainly
-**D6 −28, D7 +27**). The AI scale-up doubles as the fix: add to D4/D5/D6, remove
-redundant items from D2/D3/D7.
+**Per-domain rebalance — done.** All seven domains now match the 2024 targets
+exactly (see table). The AI scale-up doubled as the rebalance: ~39 items added to
+under-target D4/D5/D6, ~39 redundant near-duplicates removed from over-target
+D2/D3/D7. Keep counts on-target with same-domain (or matched) swaps going forward.
