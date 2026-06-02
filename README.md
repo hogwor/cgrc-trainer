@@ -9,6 +9,7 @@ questions across all 7 domains, weighted to the official blueprint, plus an offl
 - **Spaced repetition** — a Leitner schedule resurfaces each question as its interval (1 → 3 → 7 → 14 → 30 days) elapses; answer correctly to advance a box, miss to reset. "Spaced review · N due" quizzes exactly what's due.
 - **Drill weak questions** — re-quiz only the questions you've missed.
 - **Flashcards** — flip term ↔ answer + explanation, by domain; rate "Got it" / "Review again" to feed the spaced-repetition schedule.
+- **Concept Review** — study the key point + rationale behind every question; filter to "needs review" (not-yet-mastered) items, search by term or NIST reference, and switch on Recall mode to hide answers for active recall.
 - **Progress** — overall accuracy, accuracy per domain, and a mastery panel (mastered/seen/due counts + per-box pyramid), persisted on-device (UserDefaults).
 - **Audio Study** — listen to the source material offline (on-device text-to-speech, background playback, lock-screen controls, resume). 40 tracks across 16 publications: verbatim public-domain NIST text (FIPS 199/200, SP 800-37/39/30/137) plus plain-language study briefings for the heavier and 2024 references (CSF 2.0, AI RMF, FedRAMP 2024, SP 800-53/53A/88/34/161/18/60). A **Voice picker** lets you choose any installed voice and prefers Apple's **Zoe** premium voice automatically; if it isn't installed yet, the app shows how to download it (Settings → Accessibility → Spoken Content → Voices → English → Zoe).
 

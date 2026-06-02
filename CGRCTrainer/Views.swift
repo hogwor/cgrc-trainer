@@ -8,6 +8,8 @@ struct RootView: View {
                 .tabItem { Label("Quiz", systemImage: "checkmark.circle") }
             FlashcardView()
                 .tabItem { Label("Flashcards", systemImage: "rectangle.on.rectangle") }
+            ConceptReviewView()
+                .tabItem { Label("Concepts", systemImage: "book") }
             AudioLibraryView()
                 .tabItem { Label("Audio", systemImage: "headphones") }
             StatsView()
@@ -540,6 +542,110 @@ struct StatsView: View {
                 }
             }
             .navigationTitle("Progress")
+        }
+    }
+}
+
+// MARK: - Concept Review
+/// A study/reference surface built from each question's correct answer + explanation
+/// (the teaching content). Browse or search the concepts, focus on not-yet-mastered
+/// items, and use Recall mode to hide the answer for active recall — reinforcing
+/// understanding rather than answer-pattern memorization.
+struct ConceptReviewView: View {
+    @EnvironmentObject var store: Store
+    @State private var domain = 0
+    @State private var needsOnly = false
+    @State private var recall = false
+    @State private var query = ""
+    @State private var revealed: Set<Int> = []
+
+    var cards: [Question] {
+        var qs = domain == 0 ? BANK : BANK.filter { $0.domain == domain }
+        if needsOnly { qs = qs.filter { needsReview($0.id) } }
+        let t = query.trimmingCharacters(in: .whitespaces).lowercased()
+        if !t.isEmpty {
+            qs = qs.filter {
+                $0.text.lowercased().contains(t)
+                || $0.explain.lowercased().contains(t)
+                || $0.options[$0.answer].lowercased().contains(t)
+            }
+        }
+        return qs
+    }
+
+    /// Touched but not yet mastered, or currently lapsed.
+    func needsReview(_ id: Int) -> Bool {
+        if store.wrongIDs.contains(id) { return true }
+        if let s = store.items[id] { return s.box < MASTERY_BOX }
+        return false
+    }
+
+    func masteryTag(_ id: Int) -> (String, Color) {
+        guard let s = store.items[id] else { return ("New", .secondary) }
+        if s.box >= MASTERY_BOX { return ("Mastered", .green) }
+        if store.wrongIDs.contains(id) || s.box == 0 { return ("Review", .orange) }
+        return ("Box \(s.box)", .blue)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Picker("Domain", selection: $domain) {
+                        Text("All domains").tag(0)
+                        ForEach(1...7, id: \.self) { Text("D\($0): \(DOMAINS[$0]!)").tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                    Toggle("Needs review only", isOn: $needsOnly)
+                    Toggle("Recall mode (hide the key point)", isOn: $recall)
+                }
+                Section("\(cards.count) concept\(cards.count == 1 ? "" : "s")") {
+                    if cards.isEmpty {
+                        Text(needsOnly ? "Nothing to review here — keep it up."
+                                       : "No concepts match.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(cards) { card($0) }
+                    }
+                }
+            }
+            .navigationTitle("Concept Review")
+            .searchable(text: $query, prompt: "Search concepts, terms, NIST refs")
+        }
+    }
+
+    @ViewBuilder func card(_ q: Question) -> some View {
+        let show = !recall || revealed.contains(q.id)
+        let tag = masteryTag(q.id)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("D\(q.domain)")
+                    .font(.caption2).bold()
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.15))
+                    .clipShape(Capsule())
+                Spacer()
+                Text(tag.0).font(.caption2).foregroundStyle(tag.1)
+            }
+            Text(q.text)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+            if show {
+                Text(q.options[q.answer])
+                    .font(.callout).bold().foregroundStyle(.green)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(q.explain)
+                    .font(.footnote).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Tap to reveal the key point").font(.footnote).foregroundStyle(.blue)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard recall else { return }
+            if revealed.contains(q.id) { revealed.remove(q.id) } else { revealed.insert(q.id) }
         }
     }
 }

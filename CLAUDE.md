@@ -42,12 +42,15 @@ network, no database):
 |------|----------------|
 | `CGRCTrainerApp.swift` | `@main` app, `SplashView`, the `Question` model, `DOMAINS`/`WEIGHTS` maps, `Store` (progress persistence). |
 | `QuestionBank.swift` | `BANK: [Question]` — **750 items**. The single source of exam content. |
-| `Views.swift` | `RootView` (TabView), quiz setup/runner/results, flashcards, stats, **adaptive pool**. |
+| `Views.swift` | `RootView` (TabView), quiz setup/runner/results, flashcards, **concept review**, stats, **adaptive pool**, `examPool()`. |
 | `AudioContent.swift` | `AUDIO_LIBRARY: [AudioTrack]` of NIST publication text (public-domain) + `AUDIO_PUBLICATIONS`. |
 | `AudioPlayerView.swift` | `SpeechEngine` (AVSpeechSynthesizer + lock-screen controls) and the audio UI. |
 | `Assets.xcassets` | `AppIcon` and `CGRCIcon` (splash + Now Playing artwork). |
 
-Four tabs: **Quiz**, **Flashcards**, **Audio**, **Progress**.
+Five tabs: **Quiz**, **Flashcards**, **Concepts**, **Audio**, **Progress**.
+(**Concepts** = `ConceptReviewView`: a read/search surface built from each item's
+correct answer + `explain`, filterable to not-yet-mastered items via the
+Leitner state, with a Recall mode that hides the key point for active recall.)
 
 ```swift
 struct Question: Identifiable {
