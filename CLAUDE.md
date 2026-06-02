@@ -172,6 +172,12 @@ EOF
   2.0. Setup screen surfaces struggling domains + boost factor.
 - Specific-domain quiz draws that domain; "drill weak questions" pulls
   `store.wrongIDs`. Modes: instant feedback vs. exam-style (feedback at end).
+- **Full mock exam** (`startExam` / `examPool()`): 125 items allocated to `WEIGHTS`
+  by largest-remainder (sums to exactly 125), forced exam-style, with a **3-hour
+  countdown** (`QuizView.timeLimit`) that auto-submits at zero. `ResultsView` scores
+  over `items.count`, so unanswered items count as missed and are surfaced. The
+  timer is a guarded `Timer.publish` `onReceive` — a no-op when `timeLimit == nil`,
+  so normal quizzes don't re-render each second.
 - **Spaced repetition (Leitner).** Each question carries an `ItemStat` (box 0…5,
   seen/correct, `due`). A correct quiz answer or flashcard "Got it" promotes one
   box; a miss resets to box 0. Review intervals per box are

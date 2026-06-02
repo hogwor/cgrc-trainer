@@ -55,6 +55,31 @@ func adaptivePool(store: Store) -> [Question] {
     return pool.shuffled()
 }
 
+/// A 125-item mock exam drawn to the official blueprint. Per-domain counts use
+/// largest-remainder allocation of `WEIGHTS` so they sum to exactly 125.
+func examPool() -> [Question] {
+    let total = 125
+    var counts: [Int: Int] = [:]
+    var remainders: [(d: Int, r: Double)] = []
+    var assigned = 0
+    for d in 1...7 {
+        let exact = Double(WEIGHTS[d] ?? 0) / 100.0 * Double(total)
+        let base  = Int(exact)
+        counts[d] = base
+        assigned += base
+        remainders.append((d, exact - Double(base)))
+    }
+    for (d, _) in remainders.sorted(by: { $0.r > $1.r }).prefix(max(0, total - assigned)) {
+        counts[d, default: 0] += 1
+    }
+    var pool: [Question] = []
+    for d in 1...7 {
+        let qs = BANK.filter { $0.domain == d }.shuffled()
+        pool += Array(qs.prefix(counts[d] ?? 0))
+    }
+    return pool.shuffled()
+}
+
 enum QuizSource { case normal, weak, due }
 
 // MARK: - Quiz setup
@@ -64,6 +89,7 @@ struct QuizSetupView: View {
     @State private var count: Int = 20
     @State private var instant = true
     @State private var active = false
+    @State private var examMode = false
     @State private var quizItems: [Question] = []   // frozen at Start; must NOT depend on store re-renders
 
     /// Candidate questions for the current setup — used only for enable/disable checks.
@@ -76,6 +102,7 @@ struct QuizSetupView: View {
     /// Snapshot the question set once, so answering (which mutates `store`) can't
     /// reshuffle the quiz out from under the runner.
     func startQuiz(source: QuizSource) {
+        examMode = false
         let pool: [Question]
         switch source {
         case .weak:   pool = BANK.filter { store.wrongIDs.contains($0.id) }
@@ -86,6 +113,13 @@ struct QuizSetupView: View {
         let shuffled = pool.shuffled()
         let n = (source == .normal) ? min(count, shuffled.count) : shuffled.count
         quizItems = Array(shuffled.prefix(n))
+        active = !quizItems.isEmpty
+    }
+
+    /// Full-length, blueprint-weighted, timed mock exam (exam-style feedback).
+    func startExam() {
+        examMode = true
+        quizItems = examPool()
         active = !quizItems.isEmpty
     }
 
@@ -147,6 +181,14 @@ struct QuizSetupView: View {
                 } footer: {
                     Text("Spaced review resurfaces items as their Leitner interval elapses (1 → 3 → 7 → 14 → 30 days); answer correctly to advance a box, miss to reset. Mastered: \(store.masteredCount)/\(BANK.count).")
                 }
+                Section {
+                    Button { startExam() } label: {
+                        Label("Full mock exam · 125 items · 3 hrs", systemImage: "timer")
+                            .font(.body.weight(.semibold))
+                    }
+                } footer: {
+                    Text("Simulates the real exam: 125 questions weighted to the blueprint, end-of-exam feedback, and a 3-hour countdown that auto-submits at zero. (Domain selection and length above don't apply.)")
+                }
                 Section("Exam blueprint") {
                     Text("125 items · 3 hours · pass at 700/1000. Domain weights:")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -164,7 +206,9 @@ struct QuizSetupView: View {
             }
             .navigationTitle("CGRC Trainer")
             .navigationDestination(isPresented: $active) {
-                QuizView(items: quizItems, instant: instant)
+                QuizView(items: quizItems,
+                         instant: examMode ? false : instant,
+                         timeLimit: examMode ? 3 * 3600 : nil)
             }
         }
     }
@@ -176,14 +220,22 @@ struct QuizView: View {
     @Environment(\.dismiss) var dismiss
     let items: [Question]
     let instant: Bool
+    var timeLimit: TimeInterval? = nil
 
     @State private var idx = 0
     @State private var chosen: Int? = nil
     @State private var order: [Int] = []
     @State private var answers: [(id: Int, correct: Bool, chosen: Int)] = []
     @State private var done = false
+    @State private var remaining: TimeInterval = 0
+    @State private var timerArmed = false
 
     var q: Question { items[idx] }
+
+    func timeString(_ t: TimeInterval) -> String {
+        let s = max(0, Int(t))
+        return String(format: "%d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60)
+    }
 
     var body: some View {
         Group {
@@ -194,11 +246,30 @@ struct QuizView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
-        .onAppear { if order.isEmpty { newOrder() } }
+        .onAppear {
+            if order.isEmpty { newOrder() }
+            if let timeLimit, !timerArmed { remaining = timeLimit; timerArmed = true }
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            guard timeLimit != nil, !done else { return }
+            remaining = max(0, remaining - 1)
+            if remaining == 0 { store.finishQuiz(); done = true }   // auto-submit at zero
+        }
     }
 
     var quizBody: some View {
         VStack(spacing: 0) {
+            if timeLimit != nil {
+                HStack {
+                    Label(timeString(remaining), systemImage: "timer")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(remaining <= 300 ? .red : .primary)
+                    Spacer()
+                    Text("Mock exam").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+            }
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -294,14 +365,18 @@ struct ResultsView: View {
     let onDone: () -> Void
 
     var right: Int { answers.filter { $0.correct }.count }
-    var pct: Int { answers.isEmpty ? 0 : Int(Double(right) / Double(answers.count) * 100) }
+    var total: Int { items.count }
+    var unanswered: Int { max(0, total - answers.count) }
+    var pct: Int { total == 0 ? 0 : Int(Double(right) / Double(total) * 100) }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
                 Text("\(pct)%").font(.system(size: 54, weight: .bold))
                     .foregroundStyle(pct >= 70 ? .green : .orange)
-                Text("\(right) of \(answers.count) correct" + (pct >= 70 ? " — passing range 👍" : " — keep drilling"))
+                Text("\(right) of \(total) correct"
+                     + (unanswered > 0 ? " · \(unanswered) unanswered" : "")
+                     + (pct >= 70 ? " — passing range 👍" : " — keep drilling"))
                     .foregroundStyle(.secondary)
 
                 ForEach(Array(answers.enumerated()), id: \.offset) { n, a in
