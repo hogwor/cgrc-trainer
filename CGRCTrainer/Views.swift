@@ -8,6 +8,8 @@ struct RootView: View {
                 .tabItem { Label("Quiz", systemImage: "checkmark.circle") }
             FlashcardView()
                 .tabItem { Label("Flashcards", systemImage: "rectangle.on.rectangle") }
+            AudioLibraryView()
+                .tabItem { Label("Audio", systemImage: "headphones") }
             StatsView()
                 .tabItem { Label("Progress", systemImage: "chart.bar") }
         }
@@ -21,6 +23,38 @@ func questions(forDomain dom: Int?, weak: Set<Int>?) -> [Question] {
     return BANK.filter { $0.domain == d }
 }
 
+/// Weight for each domain: lower accuracy → higher weight (range 1.0–3.0).
+/// Domains with fewer than 5 answers get a neutral-high weight of 2.0.
+func domainWeights(store: Store) -> [Int: Double] {
+    var w: [Int: Double] = [:]
+    for d in 1...7 {
+        let answered = store.domA[d] ?? 0
+        let correct  = store.domC[d] ?? 0
+        if answered < 5 {
+            w[d] = 2.0
+        } else {
+            let accuracy = Double(correct) / Double(answered)
+            w[d] = 1.0 + (1.0 - accuracy) * 2.0
+        }
+    }
+    return w
+}
+
+/// Builds a shuffled pool of ~300 questions weighted by per-domain struggle.
+/// Struggling domains are overrepresented so the quiz naturally drills weak spots.
+func adaptivePool(store: Store) -> [Question] {
+    let weights   = domainWeights(store: store)
+    let totalW    = weights.values.reduce(0, +)
+    let target    = 300
+    var pool: [Question] = []
+    for d in 1...7 {
+        let share = max(1, Int((weights[d]! / totalW * Double(target)).rounded()))
+        let qs    = BANK.filter { $0.domain == d }.shuffled()
+        pool     += Array(qs.prefix(share))
+    }
+    return pool.shuffled()
+}
+
 // MARK: - Quiz setup
 struct QuizSetupView: View {
     @EnvironmentObject var store: Store
@@ -28,11 +62,35 @@ struct QuizSetupView: View {
     @State private var count: Int = 20
     @State private var instant = true
     @State private var active = false
-    @State private var weakMode = false
+    @State private var quizItems: [Question] = []   // frozen at Start; must NOT depend on store re-renders
 
+    /// Candidate questions for the current setup — used only for enable/disable checks.
+    /// The live quiz draws from the frozen `quizItems` snapshot built in `startQuiz`.
     var pool: [Question] {
-        weakMode ? questions(forDomain: nil, weak: store.wrongIDs)
-                 : questions(forDomain: domain == 0 ? nil : domain, weak: nil)
+        if domain == 0 { return adaptivePool(store: store) }
+        return questions(forDomain: domain, weak: nil)
+    }
+
+    /// Snapshot the question set once, so answering (which mutates `store`) can't
+    /// reshuffle the quiz out from under the runner.
+    func startQuiz(weak: Bool) {
+        let source = weak
+            ? questions(forDomain: nil, weak: store.wrongIDs)
+            : (domain == 0 ? adaptivePool(store: store) : questions(forDomain: domain, weak: nil))
+        let shuffled = source.shuffled()
+        let n = weak ? shuffled.count : min(count, shuffled.count)
+        quizItems = Array(shuffled.prefix(n))
+        active = true
+    }
+
+    /// Domains where the user is scoring below 70% and has enough data to judge.
+    var strugglingDomains: [Int] {
+        (1...7).filter { d in
+            let a = store.domA[d] ?? 0
+            let c = store.domC[d] ?? 0
+            guard a >= 5 else { return false }
+            return Double(c) / Double(a) < 0.70
+        }
     }
 
     var body: some View {
@@ -45,13 +103,38 @@ struct QuizSetupView: View {
                             Text("D\(d): \(DOMAINS[d]!)").tag(d)
                         }
                     }
+                    if domain == 0 {
+                        if strugglingDomains.isEmpty {
+                            Label("Adaptive mix — no weak domains yet", systemImage: "brain")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Label("Adaptive mix — drilling harder on:", systemImage: "brain")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                                let weights = domainWeights(store: store)
+                                ForEach(strugglingDomains, id: \.self) { d in
+                                    let a = store.domA[d] ?? 0
+                                    let c = store.domC[d] ?? 0
+                                    let pct = a == 0 ? 0 : Int(Double(c) / Double(a) * 100)
+                                    let boost = weights[d].map { String(format: "%.1f×", $0) } ?? ""
+                                    HStack {
+                                        Text("D\(d) \(DOMAINS[d]!)")
+                                            .font(.footnote).bold()
+                                        Spacer()
+                                        Text("\(pct)% · \(boost) weight")
+                                            .font(.footnote).foregroundStyle(.orange)
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Stepper("Questions: \(count)", value: $count, in: 1...60, step: 5)
                     Toggle("Instant feedback", isOn: $instant)
                 }
                 Section {
-                    Button("Start quiz") { weakMode = false; active = true }
+                    Button("Start quiz") { startQuiz(weak: false) }
                         .disabled(pool.isEmpty)
-                    Button("Drill my weak questions") { weakMode = true; active = true }
+                    Button("Drill my weak questions") { startQuiz(weak: true) }
                         .disabled(store.wrongIDs.isEmpty)
                 }
                 Section("Exam blueprint") {
@@ -60,7 +143,7 @@ struct QuizSetupView: View {
                     ForEach(1...7, id: \.self) { d in
                         HStack {
                             Text("D\(d)").frame(width: 34, alignment: .leading)
-                            ProgressView(value: Double(WEIGHTS[d]!), total: 22)
+                            ProgressView(value: Double(WEIGHTS[d]!), total: 17)
                             Text("\(WEIGHTS[d]!)%").frame(width: 40, alignment: .trailing)
                                 .font(.footnote)
                         }
@@ -71,8 +154,7 @@ struct QuizSetupView: View {
             }
             .navigationTitle("CGRC Trainer")
             .navigationDestination(isPresented: $active) {
-                let n = weakMode ? pool.count : min(count, pool.count)
-                QuizView(items: Array(pool.shuffled().prefix(n)), instant: instant)
+                QuizView(items: quizItems, instant: instant)
             }
         }
     }
@@ -106,36 +188,54 @@ struct QuizView: View {
     }
 
     var quizBody: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ProgressView(value: Double(idx), total: Double(items.count))
-            Text("Question \(idx + 1) of \(items.count) · D\(q.domain)")
-                .font(.caption).foregroundStyle(.secondary)
-            Text(q.text).font(.title3).bold()
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ProgressView(value: Double(idx), total: Double(items.count))
+                        Text("Question \(idx + 1) of \(items.count) · D\(q.domain)")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(q.text).font(.title3).bold()
+                            .fixedSize(horizontal: false, vertical: true)
 
-            ForEach(order, id: \.self) { i in
-                Button { pick(i) } label: {
-                    HStack {
-                        Text(q.options[i]).multilineTextAlignment(.leading)
-                        Spacer()
+                        ForEach(order, id: \.self) { i in
+                            Button { pick(i) } label: {
+                                HStack {
+                                    Text(q.options[i])
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Spacer()
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(bg(for: i))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(.gray.opacity(0.3)))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(chosen != nil)
+                        }
+
+                        if instant, let c = chosen {
+                            Text((c == q.answer ? "✓ Correct. " : "✗ Not quite. ") + q.explain)
+                                .font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.gray.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .id("feedback")
+                        }
                     }
                     .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(bg(for: i))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(.gray.opacity(0.3)))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.plain)
-                .disabled(chosen != nil)
+                .onChange(of: chosen) { c in
+                    guard instant, c != nil else { return }
+                    withAnimation { proxy.scrollTo("feedback", anchor: .bottom) }
+                }
             }
 
-            if instant, let c = chosen {
-                Text((c == q.answer ? "✓ Correct. " : "✗ Not quite. ") + q.explain)
-                    .font(.callout).padding()
-                    .background(Color.gray.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-
-            Spacer()
+            Divider()
             HStack {
                 Button("Quit") { dismiss() }.foregroundStyle(.secondary)
                 Spacer()
@@ -144,12 +244,15 @@ struct QuizView: View {
                         .buttonStyle(.borderedProminent)
                 }
             }
+            .padding()
         }
-        .padding()
     }
 
     func bg(for i: Int) -> Color {
         guard let c = chosen else { return Color.gray.opacity(0.08) }
+        guard instant else {        // exam mode: mark the picked cell only, never reveal the key
+            return i == c ? Color.blue.opacity(0.18) : Color.gray.opacity(0.08)
+        }
         if i == q.answer { return Color.green.opacity(0.25) }
         if i == c { return Color.red.opacity(0.25) }
         return Color.gray.opacity(0.08)
@@ -231,7 +334,7 @@ struct FlashcardView: View {
                     ForEach(1...7, id: \.self) { Text("D\($0)").tag($0) }
                 }
                 .pickerStyle(.menu)
-                .onChange(of: domain) { _, _ in build() }
+                .onChange(of: domain) { _ in build() }
 
                 if deck.isEmpty {
                     Text("No cards").foregroundStyle(.secondary)
@@ -268,7 +371,7 @@ struct FlashcardView: View {
             }
             .padding()
             .navigationTitle("Flashcards")
-            .onAppear { if deck.isEmpty { build() } }
+            .onAppear { build() }
         }
     }
 

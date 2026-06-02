@@ -4,9 +4,65 @@ import SwiftUI
 @main
 struct CGRCTrainerApp: App {
     @StateObject private var store = Store()
+    @State private var splashDone = false
+
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store)
+            ZStack {
+                RootView().environmentObject(store)
+                if !splashDone {
+                    SplashView { splashDone = true }
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+            }
+            .animation(.easeOut(duration: 0.5), value: splashDone)
+        }
+    }
+}
+
+// MARK: - Splash screen
+struct SplashView: View {
+    let onFinished: () -> Void
+    @State private var scale: CGFloat = 0.6
+    @State private var iconOpacity: Double = 0
+    @State private var textOpacity: Double = 0
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image("CGRCIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 130, height: 130)
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .shadow(color: .blue.opacity(0.6), radius: 24, x: 0, y: 8)
+                    .scaleEffect(scale)
+                    .opacity(iconOpacity)
+
+                VStack(spacing: 6) {
+                    Text("CGRC Trainer")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("ISC2 Exam Prep")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .opacity(textOpacity)
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) {
+                scale = 1.0
+                iconOpacity = 1.0
+            }
+            withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
+                textOpacity = 1.0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
+                onFinished()
+            }
         }
     }
 }
@@ -30,7 +86,7 @@ let DOMAINS: [Int: String] = [
     6: "System Compliance",
     7: "Compliance Maintenance"
 ]
-let WEIGHTS: [Int: Int] = [1:16, 2:10, 3:14, 4:17, 5:16, 6:14, 7:13]
+let WEIGHTS: [Int: Int] = [1:16, 2:11, 3:15, 4:16, 5:15, 6:10, 7:17]   // ISC² 2023 blueprint
 
 // MARK: - Persistence
 final class Store: ObservableObject {
