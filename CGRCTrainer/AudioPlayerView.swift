@@ -12,6 +12,8 @@ final class SpeechEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
     @Published var playState: PlayState = .stopped
     @Published var currentParagraph: Int = 0
     @Published var currentTrackID: Int? = nil
+    /// Identifier of the user-chosen voice, or nil for "automatic (best available)".
+    @Published var voiceID: String? = UserDefaults.standard.string(forKey: "audio_voice_id")
 
     var track: AudioTrack? = nil
     var rate: Float = 0.50
@@ -21,6 +23,7 @@ final class SpeechEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
     // Persistence keys
     private let kTrackID   = "audio_last_track_id"
     private let kParagraph = "audio_last_paragraph"
+    private let kVoiceID   = "audio_voice_id"
 
     override init() {
         super.init()
@@ -230,11 +233,44 @@ final class SpeechEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
 
     // MARK: – Voice
 
-    private var preferredVoice: AVSpeechSynthesisVoice? {
-        AVSpeechSynthesisVoice.speechVoices().first(where: {
-            $0.name.caseInsensitiveCompare("Zoe") == .orderedSame &&
-            $0.language.hasPrefix("en")
-        }) ?? AVSpeechSynthesisVoice(language: "en-US")
+    /// English voices installed on this device, best quality first.
+    func englishVoices() -> [AVSpeechSynthesisVoice] {
+        AVSpeechSynthesisVoice.speechVoices()
+            .filter { $0.language.hasPrefix("en") }
+            .sorted { a, b in
+                a.quality.rawValue != b.quality.rawValue
+                    ? a.quality.rawValue > b.quality.rawValue   // premium > enhanced > default
+                    : a.name < b.name
+            }
+    }
+
+    /// True once the user has downloaded the Zoe premium voice in iOS Settings.
+    var hasZoePremium: Bool {
+        AVSpeechSynthesisVoice.speechVoices().contains {
+            $0.name.caseInsensitiveCompare("Zoe") == .orderedSame && $0.quality == .premium
+        }
+    }
+
+    /// The voice actually used: explicit user choice → best Zoe → best English → system default.
+    var resolvedVoice: AVSpeechSynthesisVoice? {
+        let all = AVSpeechSynthesisVoice.speechVoices()
+        if let id = voiceID, let v = all.first(where: { $0.identifier == id }) { return v }
+        let zoe = all.filter {
+            $0.name.caseInsensitiveCompare("Zoe") == .orderedSame && $0.language.hasPrefix("en")
+        }
+        if let bestZoe = zoe.max(by: { $0.quality.rawValue < $1.quality.rawValue }) { return bestZoe }
+        if let bestEn = englishVoices().first { return bestEn }
+        return AVSpeechSynthesisVoice(language: "en-US")
+    }
+
+    /// Choose a voice (nil = automatic). Restart the current paragraph so the change is audible.
+    func setVoice(_ id: String?) {
+        voiceID = id
+        if let id { UserDefaults.standard.set(id, forKey: kVoiceID) }
+        else      { UserDefaults.standard.removeObject(forKey: kVoiceID) }
+        if playState == .playing, let t = track {
+            play(track: t, from: currentParagraph)
+        }
     }
 
     // MARK: – Internal speak
@@ -248,7 +284,7 @@ final class SpeechEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegat
         let utt = AVSpeechUtterance(string: track.paragraphs[currentParagraph])
         utt.rate            = rate
         utt.pitchMultiplier = 1.0
-        utt.voice           = preferredVoice
+        utt.voice           = resolvedVoice
         playState = .playing
         synth.speak(utt)
         updateNowPlaying()
@@ -285,6 +321,7 @@ struct AudioLibraryView: View {
     @StateObject private var engine = SpeechEngine()
     @State private var selectedPub: String? = AUDIO_PUBLICATIONS.first
     @State private var showingPlayer = false
+    @State private var showingVoices = false
     @State private var chosenTrack: AudioTrack? = nil
 
     var tracksForSelected: [AudioTrack] {
@@ -368,10 +405,113 @@ struct AudioLibraryView: View {
                 }
             }
             .navigationTitle("Audio Study")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showingVoices = true } label: {
+                        Image(systemName: "person.wave.2")
+                    }
+                    .accessibilityLabel("Voice settings")
+                }
+            }
             .sheet(isPresented: $showingPlayer) {
                 if let track = chosenTrack {
                     AudioPlayerSheet(startTrack: track, engine: engine)
                         .presentationDetents([.medium, .large])
+                }
+            }
+            .sheet(isPresented: $showingVoices) {
+                VoicePickerView(engine: engine)
+                    .presentationDetents([.medium, .large])
+            }
+        }
+    }
+}
+
+// MARK: – Voice picker
+struct VoicePickerView: View {
+    @ObservedObject var engine: SpeechEngine
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.openURL) var openURL
+
+    private func qualityLabel(_ q: AVSpeechSynthesisVoiceQuality) -> String {
+        switch q {
+        case .premium:  return "Premium"
+        case .enhanced: return "Enhanced"
+        default:        return "Default"
+        }
+    }
+
+    private func openSettings() {
+        #if os(iOS)
+        if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) }
+        #endif
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if !engine.hasZoePremium {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Get the Zoe premium voice", systemImage: "sparkles")
+                                .font(.headline)
+                            Text("Premium voices are supplied by iOS and can’t be bundled in an app. Download Zoe once on this device, then pick it below:")
+                                .font(.footnote).foregroundStyle(.secondary)
+                            Text("Settings → Accessibility → Spoken Content → Voices → English → Zoe → tap the download (cloud) icon.")
+                                .font(.footnote)
+                            Button { openSettings() } label: {
+                                Label("Open Settings", systemImage: "gear")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                Section {
+                    Button { engine.setVoice(nil); dismiss() } label: {
+                        HStack {
+                            Text("Automatic (best available)")
+                            Spacer()
+                            if engine.voiceID == nil {
+                                Image(systemName: "checkmark").foregroundStyle(.blue)
+                            }
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                } footer: {
+                    Text("Now speaking with: " +
+                         (engine.resolvedVoice.map { "\($0.name) · \(qualityLabel($0.quality))" }
+                          ?? "system default"))
+                }
+
+                Section("English voices on this device") {
+                    ForEach(engine.englishVoices(), id: \.identifier) { v in
+                        Button { engine.setVoice(v.identifier); dismiss() } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(v.name)
+                                    Text("\(v.language) · \(qualityLabel(v.quality))")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if v.quality == .premium {
+                                    Image(systemName: "sparkles").foregroundStyle(.purple)
+                                }
+                                if engine.voiceID == v.identifier {
+                                    Image(systemName: "checkmark").foregroundStyle(.blue)
+                                }
+                            }
+                        }
+                        .foregroundStyle(.primary)
+                    }
+                }
+            }
+            .navigationTitle("Voice")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
                 }
             }
         }

@@ -193,8 +193,15 @@ EOF
 
 ## Audio engine (AudioPlayerView.swift)
 
-- **`AVSpeechSynthesizer`** — offline, no API, no audio files. Prefers the **"Zoe"**
-  premium voice if installed, else system en-US.
+- **`AVSpeechSynthesizer`** — offline, no API, no audio files. Voice resolution
+  (`SpeechEngine.resolvedVoice`): explicit user pick (`voiceID`, persisted) →
+  best-quality **"Zoe"** → best-quality English → system en-US. **iOS premium voices
+  (Zoe etc.) can't be bundled or downloaded by the app** — the user installs them
+  in *Settings → Accessibility → Spoken Content → Voices*. The **Voice picker**
+  (person.wave.2 toolbar button in Audio Study) lists installed English voices by
+  quality, flags Premium, and — when Zoe premium is absent (`hasZoePremium`) — shows
+  download steps + an Open-Settings button. Changing voice restarts the current
+  paragraph so it's audible.
 - `AVAudioSession` `.playback`/`.spokenAudio` (plays with screen off / over the
   silent switch). Lock-screen transport via `MPRemoteCommandCenter`, Now Playing
   metadata via `MPNowPlayingInfoCenter`.
