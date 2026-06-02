@@ -199,8 +199,15 @@ EOF
   silent switch). Lock-screen transport via `MPRemoteCommandCenter`, Now Playing
   metadata via `MPNowPlayingInfoCenter`.
 - Plays **paragraph by paragraph**, auto-advances tracks, persists position,
-  handles interruptions. Content is verbatim public-domain NIST text — keep
-  `AudioTrack.paragraphs` chunked to ~1–3 sentences.
+  handles interruptions. Keep `AudioTrack.paragraphs` chunked to ~1–3 sentences.
+- **Two content types, keyed by `chapter`:** `"Full Document"` = **verbatim**
+  public-domain NIST text (FIPS 199/200, SP 800-37/39/30/137); `"Study Briefing"`
+  = **accurate original** plain-language narration (NOT verbatim) for docs that
+  are impractical to read in full and for the 2024 frameworks the bank tests —
+  CSF 2.0, AI RMF, FedRAMP (2024), SP 800-53/53A/88/34/161/18/60. Each briefing
+  opens by stating it's a briefing. **Never label authored briefings as verbatim**,
+  and don't paste fabricated text into a `"Full Document"` track. `AUDIO_PUBLICATIONS`
+  auto-derives from the tracks — no separate list to maintain.
 
 ## House style
 

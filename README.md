@@ -1,7 +1,7 @@
 # CGRC Trainer — iOS (SwiftUI)
 
-A native iOS study app for the ISC2 CGRC exam (outline effective June 15, 2024). 59 practice
-questions across all 7 domains, weighted to the official blueprint.
+A native iOS study app for the ISC2 CGRC exam (outline effective June 15, 2024). 750 practice
+questions across all 7 domains, weighted to the official blueprint, plus an offline audio study library.
 
 ## Features
 - **Quiz** — pick a domain (or all), choose length, instant or end-of-exam feedback, scored results with per-domain breakdown and full answer review.
@@ -9,6 +9,7 @@ questions across all 7 domains, weighted to the official blueprint.
 - **Drill weak questions** — re-quiz only the questions you've missed.
 - **Flashcards** — flip term ↔ answer + explanation, by domain; rate "Got it" / "Review again" to feed the spaced-repetition schedule.
 - **Progress** — overall accuracy, accuracy per domain, and a mastery panel (mastered/seen/due counts + per-box pyramid), persisted on-device (UserDefaults).
+- **Audio Study** — listen to the source material offline (on-device text-to-speech, background playback, lock-screen controls, resume). 40 tracks across 16 publications: verbatim public-domain NIST text (FIPS 199/200, SP 800-37/39/30/137) plus plain-language study briefings for the heavier and 2024 references (CSF 2.0, AI RMF, FedRAMP 2024, SP 800-53/53A/88/34/161/18/60).
 
 ## Requirements
 - A Mac with **Xcode 15+** (iOS 16.0 deployment target).
