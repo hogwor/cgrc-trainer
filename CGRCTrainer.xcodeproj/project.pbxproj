@@ -10,13 +10,20 @@
 		BA01000000000000000001 /* CGRCTrainerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01000000000000000001 /* CGRCTrainerApp.swift */; };
 		BA02000000000000000002 /* QuestionBank.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA02000000000000000002 /* QuestionBank.swift */; };
 		BA03000000000000000003 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03000000000000000003 /* Views.swift */; };
+		BA04000000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA04000000000000000004 /* Assets.xcassets */; };
+		BA05000000000000000005 /* AudioContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05000000000000000005 /* AudioContent.swift */; };
+		BA06000000000000000006 /* AudioPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA06000000000000000006 /* AudioPlayerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		PR01000000000000000001 /* CGRCTrainer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CGRCTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA01000000000000000001 /* CGRCTrainerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGRCTrainerApp.swift; sourceTree = "<group>"; };
 		AA02000000000000000002 /* QuestionBank.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionBank.swift; sourceTree = "<group>"; };
 		AA03000000000000000003 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
+		AA04000000000000000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA05000000000000000005 /* AudioContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioContent.swift; sourceTree = "<group>"; };
+		AA06000000000000000006 /* AudioPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerView.swift; sourceTree = "<group>"; };
+		AA07000000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		PR01000000000000000001 /* CGRCTrainer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CGRCTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +51,10 @@
 				AA01000000000000000001 /* CGRCTrainerApp.swift */,
 				AA03000000000000000003 /* Views.swift */,
 				AA02000000000000000002 /* QuestionBank.swift */,
+				AA04000000000000000004 /* Assets.xcassets */,
+				AA05000000000000000005 /* AudioContent.swift */,
+				AA06000000000000000006 /* AudioPlayerView.swift */,
+				AA07000000000000000007 /* Info.plist */,
 			);
 			path = CGRCTrainer;
 			sourceTree = "<group>";
@@ -114,6 +125,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BA04000000000000000004 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +137,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				BA01000000000000000001 /* CGRCTrainerApp.swift in Sources */,
+				BA05000000000000000005 /* AudioContent.swift in Sources */,
+				BA06000000000000000006 /* AudioPlayerView.swift in Sources */,
 				BA03000000000000000003 /* Views.swift in Sources */,
 				BA02000000000000000002 /* QuestionBank.swift in Sources */,
 			);
@@ -168,14 +182,14 @@
 		BC03000000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CGRCTrainer/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.CGRCTrainer;
@@ -189,14 +203,14 @@
 		BC04000000000000000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CGRCTrainer/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.CGRCTrainer;
