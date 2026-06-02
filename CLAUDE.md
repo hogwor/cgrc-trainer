@@ -73,25 +73,32 @@ struct Question: Identifiable {
 
 ---
 
-## The CGRC domains (official ISC² 2023 blueprint)
+## The CGRC domains (official ISC² CGRC Exam Outline, effective 2024-06-15)
 
-`WEIGHTS` and the bank are tuned to these exact weights. **The bank count per
-domain must track the blueprint** (current target counts in parentheses, for a
-750-item bank):
+`WEIGHTS` is tuned to these exact weights. **The bank count per domain should
+track the blueprint** (target counts for a 750-item bank in the last column):
 
 | # | Domain | Weight | Target count |
 |---|--------|--------|--------------|
-| 1 | Information Security Risk Management Program | 16% | 120 |
-| 2 | Scope of the Information System | 11% | 83 |
-| 3 | Selection and Approval of Security/Privacy Controls | 15% | 113 |
-| 4 | Implementation of Security/Privacy Controls | 16% | 120 |
-| 5 | Assessment/Audit of Security/Privacy Controls | 15% | 112 |
-| 6 | Authorization/Approval of Information System | 10% | 75 |
-| 7 | Continuous Monitoring | 17% | 127 |
+| 1 | Security and Privacy Governance, Risk Management, and Compliance Program | 16% | 120 |
+| 2 | Scope of the System | 10% | 75 |
+| 3 | Selection and Approval of Framework, Security, and Privacy Controls | 14% | 105 |
+| 4 | Implementation of Security and Privacy Controls | 17% | 127 |
+| 5 | Assessment/Audit of Security and Privacy Controls | 16% | 120 |
+| 6 | System Compliance | 14% | 105 |
+| 7 | Compliance Maintenance | 13% | 98 |
 
 > Note: the `DOMAINS` display strings in `CGRCTrainerApp.swift` use slightly
-> shorter labels; the canonical names are above. D7 (Continuous Monitoring) is
-> the **single heaviest** domain — keep it well-stocked.
+> shorter labels; the canonical names are above. **D4 (Implementation, 17%) is
+> now the single heaviest domain.**
+>
+> ⚠️ **Outline changed on 2024-06-15 (this is the current 2024–2026 version).**
+> Versus the prior (2023) outline, **D6 rose 10%→14% and D7 fell 17%→13%** (plus
+> D2 −1, D3 −1, D4 +1, D5 +1). `WEIGHTS` and the blueprint bar are updated, but
+> the **bank's per-domain question counts still reflect the old 2023 split** — so
+> D6 is currently under-stocked and D7 over-stocked relative to the new blueprint.
+> Rebalancing the per-domain counts is pending (see *Outstanding 2024-outline
+> work* below).
 
 ---
 
@@ -269,6 +276,24 @@ correct"). For new/edited items just keep options length-comparable (invariant
   print("total",tot,"| rank-share",share,"| severe",sev)
   EOF
   ```
+
+## Outstanding 2024-outline work
+
+The bank was validated against the **June 15, 2024 CGRC Exam Outline** (current
+2024–2026). Done: `WEIGHTS` + blueprint bar updated to the 2024 split; the CSF
+question (id 111) now reflects **CSF 2.0** (six Functions incl. GOVERN); the four
+FedRAMP-JAB items (164, 383, 1008, 1074) rewritten for the **2024 FedRAMP Board /
+single "FedRAMP Authorized" designation** (JAB and JAB P-ATO are retired).
+
+Still pending:
+- **AI security coverage (biggest gap).** The 2024 outline embeds AI/ML security
+  across all seven domains (algorithmic transparency / "black-box" risk, ML model
+  governance & "machine unlearning", prompt injection, adversarial data poisoning,
+  ML-pipeline/MLOps controls, algorithmic-bias detection). The bank currently has
+  ~1 AI item. Author a spread of AI-security RMF questions and swap them in for the
+  weakest/most-redundant existing items to stay at 750.
+- **Per-domain rebalancing.** Question counts still match the 2023 weights; bring
+  them to the 2024 target counts in the domain table (mainly: add D6, trim D7).
 
 ## Known residual work (not bugs)
 

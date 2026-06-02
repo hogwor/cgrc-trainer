@@ -80,13 +80,13 @@ struct Question: Identifiable {
 let DOMAINS: [Int: String] = [
     1: "Governance, Risk Mgmt & Compliance Program",
     2: "Scope of the System",
-    3: "Selection & Approval of Controls",
+    3: "Selection & Approval of Framework & Controls",
     4: "Implementation of Controls",
     5: "Assessment/Audit of Controls",
     6: "System Compliance",
     7: "Compliance Maintenance"
 ]
-let WEIGHTS: [Int: Int] = [1:16, 2:11, 3:15, 4:16, 5:15, 6:10, 7:17]   // ISC² 2023 blueprint
+let WEIGHTS: [Int: Int] = [1:16, 2:10, 3:14, 4:17, 5:16, 6:14, 7:13]   // ISC² CGRC exam outline, effective 2024-06-15
 
 // MARK: - Persistence
 final class Store: ObservableObject {
